@@ -15,6 +15,8 @@ if platform.system() == "Windows":
     from  serial.tools import list_ports
 elif platform.system() == "Linux":
     import glob, os, re
+elif platform.system() == "Darwin":
+    import glob, os, re
 
 import Tkinter as tk
 import ttk
@@ -34,6 +36,11 @@ class MainSerialToolUI(SerialTool.SerialToolUI):
 
     def __del__(self):
         if platform.system() == "Linux":
+            try:
+                self.ser.SetStopEvent()
+            except:
+                pass
+        elif platform.system() == "Darwin":
             try:
                 self.ser.SetStopEvent()
             except:
@@ -82,6 +89,24 @@ class MainSerialToolUI(SerialTool.SerialToolUI):
                 self.thread_findserial.start()
             except Exception as e:
                 logging.error(e)
+        elif platform.system() == "Darwin":
+            try:
+                self.temp_serial = list()
+                self.temp_serial = self.find_usb_tty()
+                for item in self.temp_serial:
+                    if item not in self.list_box_serial:
+                        self.frm_left_listbox.insert("end", item)
+                for item in self.list_box_serial:
+                    if item not in self.temp_serial:
+                        index = list(self.frm_left_listbox.get(0, self.frm_left_listbox.size())).index(item)
+                        self.frm_left_listbox.delete(index)
+                self.list_box_serial = self.temp_serial
+
+                self.thread_findserial = threading.Timer(1, self.find_all_serial)
+                self.thread_findserial.setDaemon(True)
+                self.thread_findserial.start()
+            except Exception as e:
+                logging.error(e)
 
     def Toggle(self):
         '''
@@ -94,6 +119,8 @@ class MainSerialToolUI(SerialTool.SerialToolUI):
                     self.port = self.currentStrCom.split(":")[0]
                 elif platform.system() == "Linux":
                     self.port = self.currentStrCom
+                elif platform.system() == "Darwin":
+                    self.port = self.currentStrCom
                 self.baudrate = self.frm_left_combobox_baudrate.get()
                 self.parity = self.frm_left_combobox_parity.get()
                 self.databit = self.frm_left_combobox_databit.get()
@@ -104,6 +131,7 @@ class MainSerialToolUI(SerialTool.SerialToolUI):
                                                      Parity=self.parity,
                                                      Stopbits=self.stopbit)
                 self.ser.start()
+                time.sleep(1)
                 if self.ser.alive:
                     self.frm_status_label["text"] = "Open [{0}] Successful!".format(self.currentStrCom)
                     self.frm_status_label["fg"] = "#66CD00"
@@ -189,6 +217,7 @@ class MainSerialToolUI(SerialTool.SerialToolUI):
                                                       + str(self.receive_count) + "]:\n", "green")
                         self.frm_right_receive.insert("end", self.receive_data + "\n")
                         self.frm_right_receive.see("end")
+                        print len(self.receive_data)
                         self.receive_data = ""
 
             except Exception as e:
@@ -202,18 +231,23 @@ class MainSerialToolUI(SerialTool.SerialToolUI):
         发现串口设备
         '''
         tty_devs = list()
-        for dn in glob.glob('/sys/bus/usb/devices/*') :
-            try:
-                vid = int(open(os.path.join(dn, "idVendor" )).read().strip(), 16)
-                pid = int(open(os.path.join(dn, "idProduct")).read().strip(), 16)
-                if  ((vendor_id is None) or (vid == vendor_id)) and ((product_id is None) or (pid == product_id)) :
-                    dns = glob.glob(os.path.join(dn, os.path.basename(dn) + "*"))
-                    for sdn in dns :
-                        for fn in glob.glob(os.path.join(sdn, "*")) :
-                            if  re.search(r"\/ttyUSB[0-9]+$", fn) :
-                                tty_devs.append(os.path.join("/dev", os.path.basename(fn)))
-            except Exception as ex:
-                pass
+        if platform.system() == "Linux":
+            for dn in glob.glob('/sys/bus/usb/devices/*') :
+                try:
+                    vid = int(open(os.path.join(dn, "idVendor" )).read().strip(), 16)
+                    pid = int(open(os.path.join(dn, "idProduct")).read().strip(), 16)
+                    if  ((vendor_id is None) or (vid == vendor_id)) and ((product_id is None) or (pid == product_id)) :
+                        dns = glob.glob(os.path.join(dn, os.path.basename(dn) + "*"))
+                        for sdn in dns :
+                            for fn in glob.glob(os.path.join(sdn, "*")) :
+                                if  re.search(r"\/ttyUSB[0-9]+$", fn) :
+                                    tty_devs.append(os.path.join("/dev", os.path.basename(fn)))
+                except Exception as ex:
+                    pass
+        elif platform.system() == "Darwin":
+            tty_devs.append("/dev/cu.wchusbserial14110")
+        
+        
         return tty_devs
 
     def space_b2a_hex(self, data):

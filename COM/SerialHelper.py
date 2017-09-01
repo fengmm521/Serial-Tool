@@ -14,8 +14,10 @@ import serial
 import binascii
 import logging
 
+#/dev/cu.wchusbserial14110 115200 8 N 1
+#print self.port,self.baudrate,self.bytesize,self.parity,self.stopbits
 class SerialHelper(object):
-    def __init__(self, Port="COM6", BaudRate="9600", ByteSize="8", Parity="N", Stopbits="1"):
+    def __init__(self, Port="/dev/cu.wchusbserial14110", BaudRate="115200", ByteSize="8", Parity="N", Stopbits="1"):
         '''
         初始化一些参数
         '''
@@ -29,6 +31,7 @@ class SerialHelper(object):
         self.thresholdValue = 64
         self.receive_data = ""
 
+        
     def start(self):
         '''
         开始，打开串口
@@ -68,6 +71,8 @@ class SerialHelper(object):
                     self.receive_data += self.l_serial.read(number).replace(binascii.unhexlify("00"), "")
                     if self.thresholdValue <= len(self.receive_data):
                         self.receive_data = ""
+                    else:
+                        print self.receive_data
             except Exception as e:
                 logging.error(e)
 

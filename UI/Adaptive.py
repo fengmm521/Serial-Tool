@@ -28,6 +28,14 @@ if g_systemName == "Linux" and g_pyVersion[:3] == "2.7":
                         "reset_label_width": 24,
                         "clear_label_width": 22
                     }
+if g_systemName == "Darwin" and g_pyVersion[:3] == "2.7": #Mac系统
+    size_dict = {
+                        "list_box_height": 20,
+                        "send_text_height": 12,
+                        "receive_text_height": 15,
+                        "reset_label_width": 24,
+                        "clear_label_width": 22
+                    }
 else:
     if g_systemInfo[:9]== "Windows-8":
         size_dict = {
